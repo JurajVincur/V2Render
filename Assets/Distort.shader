@@ -33,10 +33,10 @@ Shader "Custom/Distort" {
 					//mult by UNITY_MATRIX_P to get clip pos
 					//ComputeScreenPos to get uv
 					//float3 viewSpace = float3(polyval2d(1.0 - input.uv[0], input.uv[1], _uvToRectX), polyval2d(1.0 - input.uv[0], input.uv[1], _uvToRectY), 1.0); //TODO check 1.0 -
-					float3 viewSpace = float3(polyval2d(input.uv[0], input.uv[1], _uvToRectX), -polyval2d(input.uv[0], input.uv[1], _uvToRectY), 1.0); //flip y to convert it from opencv to unity coordinate space
+					float3 viewSpace = float3(polyval2d(input.uv[0], input.uv[1], _uvToRectX), -polyval2d(input.uv[0], input.uv[1], _uvToRectY), -1.0); //flip y to convert it from opencv to unity coordinate space, flip z bcs camera's forward is the negative Z axis, see: https://docs.unity3d.com/ScriptReference/Camera-worldToCameraMatrix.html
 					float4 clipSpace = mul(_matrixP, float4(viewSpace, 1.0));
 					float4 screenPos = ComputeScreenPos(clipSpace); //camera independent
-					float4 base = tex2D(_MainTex, (1 - screenPos.xy / screenPos.w)); //rotate each view 180deg
+					float4 base = tex2D(_MainTex, screenPos.xy / screenPos.w);
 					return base;
 				}
 
