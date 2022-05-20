@@ -1,6 +1,7 @@
 Shader "Custom/Distort" {
 	Properties{
 		_MainTex("Texture", 2D) = "white" {}
+		_LutTex("LUT Texture", 2D) = "white" {}
 	}
 
 		SubShader{
@@ -12,6 +13,7 @@ Shader "Custom/Distort" {
 
 				// Properties
 				sampler2D _MainTex;
+				sampler2D_half _LutTex;
 				float4x4 _uvToRectX;
 				float4x4 _uvToRectY;
 				float4x4 _matrixP;
@@ -27,16 +29,26 @@ Shader "Custom/Distort" {
 						);
 				}
 
-				float4 frag(v2f_img input) : COLOR {
+				float2 resolveWithLuT(float2 uv)
+				{
+					return tex2D(_LutTex, uv).xy;
+				}
+
+				float2 resolveWithPoly(float2 uv)
+				{
 					// sample texture for color
 					//polyval uv to get eye coords / view space
 					//mult by UNITY_MATRIX_P to get clip pos
 					//ComputeScreenPos to get uv
-					//float3 viewSpace = float3(polyval2d(1.0 - input.uv[0], input.uv[1], _uvToRectX), polyval2d(1.0 - input.uv[0], input.uv[1], _uvToRectY), 1.0); //TODO check 1.0 -
-					float3 viewSpace = float3(polyval2d(input.uv[0], input.uv[1], _uvToRectX), -polyval2d(input.uv[0], input.uv[1], _uvToRectY), -1.0); //flip y to convert it from opencv to unity coordinate space, flip z bcs camera's forward is the negative Z axis, see: https://docs.unity3d.com/ScriptReference/Camera-worldToCameraMatrix.html
+					float3 viewSpace = float3(polyval2d(uv[0], uv[1], _uvToRectX), -polyval2d(uv[0], uv[1], _uvToRectY), -1.0); //flip y to convert it from opencv to unity coordinate space, flip z bcs camera's forward is the negative Z axis, see: https://docs.unity3d.com/ScriptReference/Camera-worldToCameraMatrix.html
 					float4 clipSpace = mul(_matrixP, float4(viewSpace, 1.0));
 					float4 screenPos = ComputeScreenPos(clipSpace); //camera independent
-					float4 base = tex2D(_MainTex, screenPos.xy / screenPos.w);
+					return screenPos.xy / screenPos.w;
+				}
+
+				float4 frag(v2f_img input) : COLOR{
+					float2 distortedUv = resolveWithLuT(input.uv);
+					float4 base = tex2D(_MainTex, distortedUv);
 					return base;
 				}
 
